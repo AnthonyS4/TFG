@@ -48,18 +48,22 @@ func checkData(e error) {
 	}
 }
 
-//This function removes an element of a string vector
 func removeElement(vector []string, index int) []string {
+	/*
+		Input: An array of strings and the index of the element to be erased
+		Output: An array of the string that will have the keys and values of the map
+		Execution: It checks the existence of the substring ":" in the lines of the file, and erases the strings that don't have one
+	*/
 	vector[index] = vector[len(vector)-1]
 	return vector[:len(vector)-1]
 }
 
-/*
-Input: The array of bytes read in the config.yml file
-Output: An array of the string that will have the keys and values of the map
-Execution: It checks the existence of the substring ":" in the lines of the file, and erases the strings that don't have one
-*/
 func checkAttributes(data []byte) []string {
+	/*
+		Input: The array of bytes read in the config.yml file
+		Output: An array of the string that will have the keys and values of the map
+		Execution: It checks the existence of the substring ":" in the lines of the file, and erases the strings that don't have one
+	*/
 	configurationStrings := strings.Split(string(data), "\n")
 	for i := 0; i < len(configurationStrings); i++ {
 		if strings.Count(configurationStrings[i], ":") != 1 {
@@ -70,12 +74,12 @@ func checkAttributes(data []byte) []string {
 	//It returns the parametters except the last one because it is a line that contains the end of file
 }
 
-/*
-Input: The reference of the map that will contains the configurations of the program
-Output: ~
-Execution: This function reads the file config.yml and make a map with the attibutes defined in the file
-*/
 func obtainConfiguration(configuration *map[string]string) {
+	/*
+		Input: The reference of the map that will contains the configurations of the program
+		Output: ~
+		Execution: This function reads the file config.yml and make a map with the attibutes defined in the file
+	*/
 	data, error := ioutil.ReadFile("config.yml")
 	checkData(error)
 	lines := checkAttributes(data)
@@ -96,5 +100,5 @@ func main() {
 	//	waitEndProcess(processTshark)
 	configuration := make(map[string]string)
 	obtainConfiguration(&configuration)
-
+	executeTshark(obtainConfiguration)
 }
