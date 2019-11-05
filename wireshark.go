@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -38,10 +40,61 @@ func waitEndProcess(tshark *exec.Cmd) {
 	}
 }
 
+//This function will check if there is any error in the reading
+// of the configuration file, if it exists then it invokes panic(error)
+func checkData(e error) {
+	if e != nil {
+		panic(e)
+	}
+}
+
+//This function removes an element of a string vector
+func removeElement(vector []string, index int) []string {
+	vector[index] = vector[len(vector)-1]
+	return vector[:len(vector)-1]
+}
+
+/*
+Input: The array of bytes read in the config.yml file
+Output: An array of the string that will have the keys and values of the map
+Execution: It checks the existence of the substring ":" in the lines of the file, and erases the strings that don't have one
+*/
+func checkAttributes(data []byte) []string {
+	configurationStrings := strings.Split(string(data), "\n")
+	for i := 0; i < len(configurationStrings); i++ {
+		if strings.Count(configurationStrings[i], ":") != 1 {
+			configurationStrings = removeElement(configurationStrings, i)
+		}
+	}
+	return configurationStrings[:len(configurationStrings)-1]
+	//It returns the parametters except the last one because it is a line that contains the end of file
+}
+
+/*
+Input: The reference of the map that will contains the configurations of the program
+Output: ~
+Execution: This function reads the file config.yml and make a map with the attibutes defined in the file
+*/
+func obtainConfiguration(configuration *map[string]string) {
+	data, error := ioutil.ReadFile("config.yml")
+	checkData(error)
+	lines := checkAttributes(data)
+	fmt.Println(len(lines))
+	for i := 0; i < len(lines); i++ { //This loop will read and store the keys and values defined in the config.yml
+		fmt.Println(lines[i])
+		key := strings.Split(lines[i], ":")[0]
+		value := strings.Split(lines[i], ":")[1]
+		(*configuration)[key] = value
+	}
+}
+
 //
 func main() {
-	defineAskpass()
-	var processTshark *exec.Cmd
-	processTshark = executeTshark()
-	waitEndProcess(processTshark)
+	//	defineAskpass()
+	//	var processTshark *exec.Cmd
+	//	processTshark = executeTshark()
+	//	waitEndProcess(processTshark)
+	configuration := make(map[string]string)
+	obtainConfiguration(&configuration)
+
 }
