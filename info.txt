@@ -1,0 +1,6 @@
+Comando de copia para el debugger:
+cp /home/anthony/go/scr/wireshark/config.yml /home/anthony/go/bin/config.yml
+
+Comando de ejecucion del debugger:
+./dlv debug /home/anthony/go/scr/wireshark/wireshark.go
+
