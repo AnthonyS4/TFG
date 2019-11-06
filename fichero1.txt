@@ -1,0 +1,8 @@
+total 4272
+-rwxrwxr-x 1 anthony anthony 2146122 oct 30 17:35 askpass
+-rw-rw-r-- 1 anthony anthony     141 nov  6 17:57 config.yml
+-rw-rw-r-- 1 anthony anthony       0 nov  6 20:41 fichero1.txt
+-rw-rw-r-- 1 anthony anthony      26 nov  6 20:34 fichero2.txt
+-rw-rw-r-- 1 anthony anthony     860 nov  6 20:35 info.txt
+-rwxrwxr-x 1 anthony anthony 2147408 nov  6 20:40 wireshark
+-rw-rw-r-- 1 anthony anthony    5226 nov  6 20:40 wireshark.go

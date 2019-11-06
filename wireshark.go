@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -38,7 +40,7 @@ func waitEndProcess(tshark *exec.Cmd) {
 	Execution:
 */
 
-func checkData(e error) {
+func checkError(e error) {
 	/*
 		Input: The error obtained after the read of the file
 		Output: ~
@@ -81,7 +83,7 @@ func obtainConfiguration(configuration *map[string]string) {
 		Execution: This function reads the file config.yml and make a map with the attibutes defined in the file
 	*/
 	data, error := ioutil.ReadFile("config.yml")
-	checkData(error)
+	checkError(error)
 	lines := checkAttributes(data)
 	for i := 0; i < len(lines); i++ { //This loop will read and store the keys and values defined in the config.yml
 		keyAndValue := strings.Split(lines[i], ":")
@@ -92,12 +94,26 @@ func obtainConfiguration(configuration *map[string]string) {
 //With this function we start the execution of tshark with elevate privilegies
 func executeTshark(config *map[string]string) {
 	tsharkCommand := makeCommand(config)
-	fmt.Println(tsharkCommand)
-	//var commandExecutionTshark *exec.Cmd
-	//commandExecutionTshark = exec.Command(tsharkCommand)
+	var buffer io.Reader
+	buffer = strings.NewReader("790321")
+	commandExecutionTshark := exec.Command("bash", "-c", tsharkCommand)
+	commandExecutionTshark.Stdin = buffer
+	commandExecutionTshark.Start()
+	now := time.Now()
+	for time.Now().Sub(now).Seconds() < 1.0 {
+
+	}
+	if err := commandExecutionTshark.Process.Kill(); err != nil {
+		log.Fatal("failed to kill process: ", err)
+	}
 }
 
 func makeCommand(config *map[string]string) string {
+	/*
+		Input: The configuration map
+		Output:	The string of the command for the execution of tshark with the args defined in config.yml
+		Execution:	It checks the map and concats the output dirname/filename
+	*/
 	command := "sudo -S tshark -i " + (*config)["NETWORK_INTERFACE"] + " -T ek > " + obtainDirectory((*config)["PACKETS_OUTPUT_DIRNAME"])
 	if strings.Compare((*config)["PACKETS_OUTPUT_FILENAME"], "") == 0 {
 		//This attribute is not defined, then we use the predefined name
@@ -110,20 +126,28 @@ func makeCommand(config *map[string]string) string {
 }
 
 func obtainDirectory(path string) string {
+	/*
+		Input: The path given in the key(PACKETS_OUTPUT_DIRNAME) of the config map
+		Output:	The absolute path that packets will stored
+		Execution: It checks the lexically if there is any "${" => there is a env. variable then it gets the absolute path of it, else it returns the absolute path given or ""
+	*/
 	variable := ""
-	if strings.Compare(path, "") == 0 { //Output directory name not defined, then we return ""
-		return variable
-	} else { //Output directory is defined, check the existence of env. variables
+	if strings.Compare(path, "") != 0 {
 		if strings.Contains(path, "${") && strings.Contains(path, "}") { //Lexical check
 			variable += lookupEnvVariable(path) + strings.SplitAfter(path, "}")[1] + "/"
 		} else { //There is no env. variables, then we return the defined directory
 			variable = path + "/"
 		}
-		return variable
 	}
+	return variable
 }
 
 func lookupEnvVariable(path string) string {
+	/*
+		Input: The path with the env. variable
+		Output: The absolute path defined in the env. variable
+		Execution: It separates the env. variable taking out the "{" and "}", then it does an request using Getenv and gets it.
+	*/
 	variable := strings.Split(path, "}")[0]
 	variable = strings.Split(variable, "{")[1]
 	variableDirectory := os.Getenv(variable)
