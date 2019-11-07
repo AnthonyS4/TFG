@@ -7,19 +7,20 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 )
 
 //With this function we define the enviorement variable SUDO_ASKPASS, sudo command will use this variable.
-func defineAskpass() {
+/*func defineAskpass() {
 	var askpassCommand string
 	askpassCommand = "SUDO_ASKPASS=\"/home/anthony/go/scr/wireshark/askpass\""
 	exec.Command(askpassCommand)
-}
+}*/
 
 //With this function we give 3 seconds of data recollection, after this it ends the process
-func waitEndProcess(tshark *exec.Cmd) {
+/*func waitEndProcess(tshark *exec.Cmd) {
 	var start time.Time
 	var timeOut float64
 	timeOut = 3.0
@@ -32,7 +33,7 @@ func waitEndProcess(tshark *exec.Cmd) {
 		tshark.Process.Kill()
 		fmt.Println("Killed process")
 	}
-}
+}*/
 
 /*
 	Input:
@@ -70,9 +71,10 @@ func checkAttributes(data []byte) []string {
 	for i := 0; i < len(configurationStrings); i++ {
 		if strings.Count(configurationStrings[i], ":") != 1 {
 			configurationStrings = removeElement(configurationStrings, i)
+			i--
 		}
 	}
-	return configurationStrings[:len(configurationStrings)-1]
+	return configurationStrings
 	//It returns the parametters except the last one because it is a line that contains the end of file
 }
 
@@ -95,17 +97,35 @@ func obtainConfiguration(configuration *map[string]string) {
 func executeTshark(config *map[string]string) {
 	tsharkCommand := makeCommand(config)
 	var buffer io.Reader
-	buffer = strings.NewReader("790321")
+	buffer = strings.NewReader((*config)["PASSWORD"])
 	commandExecutionTshark := exec.Command("bash", "-c", tsharkCommand)
 	commandExecutionTshark.Stdin = buffer
+	executionTimeLimit := getDuration(config)
 	commandExecutionTshark.Start()
 	now := time.Now()
-	for time.Now().Sub(now).Seconds() < 1.0 {
-
+	for time.Now().Sub(now).Seconds() < executionTimeLimit {
 	}
 	if err := commandExecutionTshark.Process.Kill(); err != nil {
 		log.Fatal("failed to kill process: ", err)
 	}
+	fmt.Println(fmt.Sprintf("Executed with a duration of %f", executionTimeLimit))
+}
+
+func startTshark(command string, config *map[string]string) *exec.Cmd {
+
+}
+
+func getDuration(config *map[string]string) float64 {
+	duration := 5.0
+	if seconds, error := strconv.ParseFloat((*config)["TIME_SECONDS"], 64); error == nil && seconds > 0.0 {
+		//The error is nil => There is a amount of seconds defined, we have to check if it's negative
+		duration = seconds //Modify the duration
+	}
+	if minutes, error := strconv.ParseFloat((*config)["TIME_MINUTES"], 64); error == nil && minutes > 0.0 {
+		//The error is nil => There is a amount of minutes defined, we have to check if it's negative
+		duration += minutes * 60 //Modify the duration
+	}
+	return duration
 }
 
 func makeCommand(config *map[string]string) string {

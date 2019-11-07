@@ -4,3 +4,7 @@ Este :sera:ignorado
 PACKETS_OUTPUT_DIRNAME:${HOME}/TFG/archivos
 PACKETS_OUTPUT_FILENAME:paquetes
 Hola
+TIME_SECONDS:0.1
+Hola Otra vez
+TIME_MINUTES:0.05
+
