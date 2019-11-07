@@ -2,38 +2,13 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 )
-
-//With this function we define the enviorement variable SUDO_ASKPASS, sudo command will use this variable.
-/*func defineAskpass() {
-	var askpassCommand string
-	askpassCommand = "SUDO_ASKPASS=\"/home/anthony/go/scr/wireshark/askpass\""
-	exec.Command(askpassCommand)
-}*/
-
-//With this function we give 3 seconds of data recollection, after this it ends the process
-/*func waitEndProcess(tshark *exec.Cmd) {
-	var start time.Time
-	var timeOut float64
-	timeOut = 3.0
-	start = time.Now()
-	for time.Since(start).Seconds() < timeOut {
-	}
-	if tshark == nil {
-		fmt.Println("Nil pointer")
-	} else {
-		tshark.Process.Kill()
-		fmt.Println("Killed process")
-	}
-}*/
 
 /*
 	Input:
@@ -85,7 +60,7 @@ func obtainConfiguration(configuration *map[string]string) {
 		Execution: This function reads the file config.yml and make a map with the attibutes defined in the file
 	*/
 	data, error := ioutil.ReadFile("config.yml")
-	checkError(error)
+	checkError(error) //Checking if the file exists
 	lines := checkAttributes(data)
 	for i := 0; i < len(lines); i++ { //This loop will read and store the keys and values defined in the config.yml
 		keyAndValue := strings.Split(lines[i], ":")
@@ -93,29 +68,40 @@ func obtainConfiguration(configuration *map[string]string) {
 	}
 }
 
-//With this function we start the execution of tshark with elevate privilegies
 func executeTshark(config *map[string]string) {
-	tsharkCommand := makeCommand(config)
-	var buffer io.Reader
-	buffer = strings.NewReader((*config)["PASSWORD"])
-	commandExecutionTshark := exec.Command("bash", "-c", tsharkCommand)
-	commandExecutionTshark.Stdin = buffer
-	executionTimeLimit := getDuration(config)
-	commandExecutionTshark.Start()
+	/*
+		Input: The configuration map
+		Output: ~
+		Execution: This function executes the tshark command for an measure of time given in the config.yml
+	*/
+	commandExecutionTshark, executionTimeLimit := startTshark(makeCommand(config), config) //startTshark will begin the process
 	now := time.Now()
-	for time.Now().Sub(now).Seconds() < executionTimeLimit {
+	for time.Now().Sub(now).Seconds() < executionTimeLimit { //Loop for execution time control
 	}
-	if err := commandExecutionTshark.Process.Kill(); err != nil {
-		log.Fatal("failed to kill process: ", err)
-	}
+	checkError(commandExecutionTshark.Process.Kill()) //Check if there is any error
 	fmt.Println(fmt.Sprintf("Executed with a duration of %f", executionTimeLimit))
 }
 
-func startTshark(command string, config *map[string]string) *exec.Cmd {
-	return nil
+func startTshark(tsharkCommand string, config *map[string]string) (*exec.Cmd, float64) {
+	/*
+		Input: The command string and the map of configurations.
+		Output:	The reference to the Cmd that started the tshark command and the duration of the execution.
+		Execution: Using a Reader for read the password in the std input of the process, that is who sudo can continue. It starts the process and returns it with the measure of time
+	*/
+	buffer := strings.NewReader((*config)["PASSWORD"])
+	commandExecutionTshark := exec.Command("bash", "-c", tsharkCommand)
+	commandExecutionTshark.Stdin = buffer //With this the process can obtain the value of the key "PASSWORD"
+	executionTimeLimit := getDuration(config)
+	commandExecutionTshark.Start()
+	return commandExecutionTshark, executionTimeLimit
 }
 
 func getDuration(config *map[string]string) float64 {
+	/*
+		Input: The configuration map
+		Output:	The amount of seconds defined in config.yml, if it is not defined => we use the default duration(5 seconds)
+		Execution: We parse the keys "TIME_SECONDS" and "TIME_MINUTES", if these are defined => then it stores the add in seconds of both in the variable duration
+	*/
 	duration := 5.0
 	if seconds, error := strconv.ParseFloat((*config)["TIME_SECONDS"], 64); error == nil && seconds > 0.0 {
 		//The error is nil => There is a amount of seconds defined, we have to check if it's negative
@@ -132,7 +118,7 @@ func makeCommand(config *map[string]string) string {
 	/*
 		Input: The configuration map
 		Output:	The string of the command for the execution of tshark with the args defined in config.yml
-		Execution:	It checks the map and concats the output dirname/filename
+		Execution:	It checks the map and concats the  begin of command with the output_dirname/filename
 	*/
 	command := "sudo -S tshark -i " + (*config)["NETWORK_INTERFACE"] + " -T ek > " + obtainDirectory((*config)["PACKETS_OUTPUT_DIRNAME"])
 	if strings.Compare((*config)["PACKETS_OUTPUT_FILENAME"], "") == 0 {
