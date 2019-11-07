@@ -112,7 +112,7 @@ func executeTshark(config *map[string]string) {
 }
 
 func startTshark(command string, config *map[string]string) *exec.Cmd {
-
+	return nil
 }
 
 func getDuration(config *map[string]string) float64 {
