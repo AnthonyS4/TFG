@@ -1,12 +1,14 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -53,19 +55,21 @@ func checkAttributes(data []byte) []string {
 	//It returns the parametters except the last one because it is a line that contains the end of file
 }
 
-func obtainConfiguration(configuration *map[string]string) {
+func obtainConfiguration() *map[string]string {
 	/*
-		Input: The reference of the map that will contains the configurations of the program
-		Output: ~
+		Input: ~
+		Output: The reference of the map that will contains the configurations of the program
 		Execution: This function reads the file config.yml and make a map with the attibutes defined in the file
 	*/
+	configuration := make(map[string]string)
 	data, error := ioutil.ReadFile("config.yml")
 	checkError(error) //Checking if the file exists
 	lines := checkAttributes(data)
 	for i := 0; i < len(lines); i++ { //This loop will read and store the keys and values defined in the config.yml
 		keyAndValue := strings.Split(lines[i], ":")
-		(*configuration)[keyAndValue[0]] = keyAndValue[1]
+		configuration[keyAndValue[0]] = keyAndValue[1]
 	}
+	return &configuration
 }
 
 func executeTshark(config *map[string]string) {
@@ -74,12 +78,12 @@ func executeTshark(config *map[string]string) {
 		Output: ~
 		Execution: This function executes the tshark command for an measure of time given in the config.yml
 	*/
-	commandExecutionTshark, executionTimeLimit := startTshark(makeCommand(config), config) //startTshark will begin the process
+	commandExecutionTshark, executionTimeLimit := startTshark(makeCommandTshark(config), config) //startTshark will begin the process
 	now := time.Now()
 	for time.Now().Sub(now).Seconds() < executionTimeLimit { //Loop for execution time control
 	}
 	checkError(commandExecutionTshark.Process.Kill()) //Check if there is any error
-	fmt.Println(fmt.Sprintf("Executed with a duration of %f", executionTimeLimit))
+	fmt.Println(fmt.Sprintf("Tshark executed with a duration of %f", executionTimeLimit))
 }
 
 func startTshark(tsharkCommand string, config *map[string]string) (*exec.Cmd, float64) {
@@ -106,15 +110,19 @@ func getDuration(config *map[string]string) float64 {
 	if seconds, error := strconv.ParseFloat((*config)["TIME_SECONDS"], 64); error == nil && seconds > 0.0 {
 		//The error is nil => There is a amount of seconds defined, we have to check if it's negative
 		duration = seconds //Modify the duration
+	} else {
+		checkError(errors.New("Error in the parsing of TIME_SECONDS"))
 	}
 	if minutes, error := strconv.ParseFloat((*config)["TIME_MINUTES"], 64); error == nil && minutes > 0.0 {
 		//The error is nil => There is a amount of minutes defined, we have to check if it's negative
 		duration += minutes * 60 //Modify the duration
+	} else {
+		checkError(errors.New("Error in the parsing of TIME_MINUTES"))
 	}
 	return duration
 }
 
-func makeCommand(config *map[string]string) string {
+func makeCommandTshark(config *map[string]string) string {
 	/*
 		Input: The configuration map
 		Output:	The string of the command for the execution of tshark with the args defined in config.yml
@@ -158,15 +166,107 @@ func lookupEnvVariable(path string) string {
 	variable = strings.Split(variable, "{")[1]
 	variableDirectory := os.Getenv(variable)
 	if strings.Compare(variableDirectory, "") == 0 {
-		//The env. variable doesn't exists, then we use the Homa variable
-		variableDirectory = os.Getenv("HOME")
+		//The env. variable doesn't exists, then stop the execution
+		checkError(errors.New("The env. variable " + variable + " is not defined"))
 	} //Else then we return the new path
 	return variableDirectory
 }
 
+func desployElasticSearchNetwork(config *map[string]string) {
+	/*
+		Input: The configuration map.
+		Output: ~
+		Execution: This function start a ${nodesNumber} goroutines with a shared reference of a waitGroup, every goroutine will start the execution of a elasticsearch node. It will wait the goroutines's end.
+	*/
+	nodesNumber := obtainNodesNumber(config)
+	var waitGroup sync.WaitGroup
+	for i := 0; i < nodesNumber; i++ {
+		waitGroup.Add(1)
+		go startESNode(makeCommandES(config), config, i+1, &waitGroup)
+	}
+	waitGroup.Wait() //It waits until the execution of all the goroutines => End of the nodes net
+}
+
+func obtainNodesNumber(config *map[string]string) int {
+	/*
+		Input: The configuration map.
+		Output: The nodes numbers of the elasticsearch network.
+		Execution: It checks if NODES_NUMBER is defined, if it is then it checks the validity of the parsed number.
+	*/
+
+	if strings.Compare((*config)["NODES_NUMBER"], "") == 0 {
+		return 1
+	} else {
+		nodesNumber, e := strconv.ParseInt((*config)["NODES_NUMBER"], 10, 32)
+		if nodesNumber < 1 || e != nil {
+			checkError(errors.New("	Error in the parsing of NODES_NUMBER"))
+		}
+		return int(nodesNumber)
+	}
+}
+
+func getNodeTimeOut(config *map[string]string) float64 {
+	/*
+		Input: The configuration map.
+		Output: The numbers of seconds that will be the node timeout.
+		Execution: It checks if NODES_TIMEOUT is defined, if it is then it checks the validity of the parsed number.
+	*/
+
+	if strings.Compare((*config)["NODE_TIMEOUT"], "") == 0 {
+		return 1.0
+	} else {
+		exeTime, e := strconv.ParseFloat((*config)["NODE_TIMEOUT"], 64)
+		if exeTime < 0.0 || e != nil {
+			checkError(errors.New("	Error in the parsing of NODE_TIMEOUT"))
+		}
+		return exeTime
+	}
+}
+
+func startESNode(command string, config *map[string]string, idNode int, waitGroup *sync.WaitGroup) {
+	/*
+		Input:The command to execute, configuration map, the identifier of this goroutine, the "barrier" waitgroup.
+		Output: ~
+		Execution: It start the process with the input command, it wait a timeControl, then it executes the waitGroup.Done().
+	*/
+	defer (*waitGroup).Done() //This instruction will execute after the end of this function
+	commandExecutionES := exec.Command("bash", "-c", command)
+	commandExecutionES.Start()
+	timeControl(commandExecutionES, config, idNode)
+}
+
+func timeControl(commandExecution *exec.Cmd, config *map[string]string, idNode int) {
+	/*
+		Input: The reference to the Cmd that started a node, the configuration, and the identifier of the actual node
+		Output: ~
+		Execution: It waits the executionTime using a loop, then it kills the node process, and prints the end.
+	*/
+	now := time.Now()
+	executionTime := getNodeTimeOut(config)
+	for time.Now().Sub(now).Seconds() < executionTime { //Loop for execution time control
+	}
+	checkError(commandExecution.Process.Kill()) //Check if there is any error
+	fmt.Println(fmt.Sprintf("ES Node %d executed with a duration of %f", idNode, executionTime))
+}
+
+func makeCommandES(config *map[string]string) string {
+	/*
+		Input: The configuration map.
+		Output: The string defined by the command to execute for start a node.
+		Execution:	It checks the ELASTICSEARCH_PATH and looks if it defined and concats the directory of it with the binary location
+	*/
+	if strings.Compare((*config)["ELASTICSEARCH_PATH"], "") == 0 {
+		checkError(errors.New("The ELASTICSEARCH_PATH is not defined"))
+	}
+	command := obtainDirectory((*config)["ELASTICSEARCH_PATH"]) + "/bin/elasticsearch"
+	return command
+}
+
 //
 func main() {
-	configuration := make(map[string]string)
-	obtainConfiguration(&configuration)
-	executeTshark(&configuration)
+	configuration := obtainConfiguration()     //Obtains a reference of a map with the configurations
+	executeTshark(configuration)               //Executes tshark
+	desployElasticSearchNetwork(configuration) //Start the nodes execution
+	//dataModify(args)
+	//executeKibana(args)
 }
