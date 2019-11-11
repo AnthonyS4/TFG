@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -78,26 +79,43 @@ func executeTshark(config *map[string]string) {
 		Output: ~
 		Execution: This function executes the tshark command for an measure of time given in the config.yml
 	*/
-	commandExecutionTshark, executionTimeLimit := startTshark(makeCommandTshark(config), config) //startTshark will begin the process
-	now := time.Now()
-	for time.Now().Sub(now).Seconds() < executionTimeLimit { //Loop for execution time control
+	commandExecutionTshark, executionTimeLimit, writer := startTshark(makeCommandTshark(config), config) //startTshark will begin the process
+	go stopTshark(commandExecutionTshark, executionTimeLimit, writer)
+	if bytes, e := commandExecutionTshark.Output(); e == nil {
+		//Convert the []bytes to JSON
+		halfs := strings.Split(commandExecutionTshark.Args[2], " > ")
+		ioutil.WriteFile(halfs[1], bytes, 0)
+	} else { //An error ocurred
+		checkError(e)
 	}
-	checkError(commandExecutionTshark.Process.Kill()) //Check if there is any error
 	fmt.Println(fmt.Sprintf("Tshark executed with a duration of %f", executionTimeLimit))
 }
 
-func startTshark(tsharkCommand string, config *map[string]string) (*exec.Cmd, float64) {
+func stopTshark(commandExecutionTshark *exec.Cmd, executionTimeLimit float64, writer *io.WriteCloser) {
+	now := time.Now()
+	for time.Now().Sub(now).Seconds() < executionTimeLimit { //Loop for execution time control
+	}
+	checkError(commandExecutionTshark.Process.Kill())
+}
+
+func startTshark(tsharkCommand string, config *map[string]string) (*exec.Cmd, float64, *io.WriteCloser) {
 	/*
 		Input: The command string and the map of configurations.
 		Output:	The reference to the Cmd that started the tshark command and the duration of the execution.
 		Execution: Using a Reader for read the password in the std input of the process, that is who sudo can continue. It starts the process and returns it with the measure of time
 	*/
-	buffer := strings.NewReader((*config)["PASSWORD"])
+	//buffer := strings.NewReader((*config)["PASSWORD"])
+	tsharkCommand = "sudo ls -l > /home/anthony/TFG/archivos/ls.txt"
 	commandExecutionTshark := exec.Command("bash", "-c", tsharkCommand)
-	commandExecutionTshark.Stdin = buffer //With this the process can obtain the value of the key "PASSWORD"
+	//commandExecutionTshark.Stdin = buffer //With this the process can obtain the value of the key "PASSWORD"
+	writerPipe, e := commandExecutionTshark.StdinPipe()
+	checkError(e)
 	executionTimeLimit := getDuration(config)
-	commandExecutionTshark.Start()
-	return commandExecutionTshark, executionTimeLimit
+	executionTimeLimit = 2.0
+	writerPipe.Write([]byte((*config)["PASSWORD"]))
+	//commandExecutionTshark.Start()
+	writerPipe.Close()
+	return commandExecutionTshark, executionTimeLimit, &writerPipe
 }
 
 func getDuration(config *map[string]string) float64 {
@@ -262,11 +280,25 @@ func makeCommandES(config *map[string]string) string {
 	return command
 }
 
+func filebeatExecution(config *map[string]string) {
+	//commandExecutionFilebeat := exec.Command("bash", "-c", makeCommandFilebeat(config))
+	fmt.Println(makeCommandFilebeat(config))
+}
+
+func makeCommandFilebeat(config *map[string]string) string {
+	if strings.Compare((*config)["FILEBEAT_PATH"], "") == 0 {
+		checkError(errors.New("The FILEBEAT_PATH is not defined"))
+	}
+	command := obtainDirectory((*config)["FILEBEAT_PATH"]) + "filebeat -e"
+	return command
+}
+
 //
 func main() {
-	configuration := obtainConfiguration()     //Obtains a reference of a map with the configurations
-	executeTshark(configuration)               //Executes tshark
-	desployElasticSearchNetwork(configuration) //Start the nodes execution
-	//dataModify(args)
+	configuration := obtainConfiguration() //Obtains a reference of a map with the configurations
+	executeTshark(configuration)           //Executes tshark
+	//filebeatExecution(configuration)
+	//desployElasticSearchNetwork(configuration) //Start the nodes execution
+
 	//executeKibana(args)
 }
