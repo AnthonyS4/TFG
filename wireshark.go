@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -79,64 +78,85 @@ func executeTshark(config *map[string]string) {
 		Output: ~
 		Execution: This function executes the tshark command for an measure of time given in the config.yml
 	*/
-	commandExecutionTshark, executionTimeLimit, writer := startTshark(makeCommandTshark(config), config) //startTshark will begin the process
-	go stopTshark(commandExecutionTshark, executionTimeLimit, writer)
-	if bytes, e := commandExecutionTshark.Output(); e == nil {
-		//Convert the []bytes to JSON
-		halfs := strings.Split(commandExecutionTshark.Args[2], " > ")
-		ioutil.WriteFile(halfs[1], bytes, 0)
-	} else { //An error ocurred
-		checkError(e)
-	}
-	fmt.Println(fmt.Sprintf("Tshark executed with a duration of %f", executionTimeLimit))
+	startTshark(makeCommandTshark(config), config) //startTshark will begin the process
+	//stopTshark(commandExecutionTshark, executionTimeLimit, config)
+	//if bytes, e := commandExecutionTshark.Output(); e == nil {
+	//Convert the []bytes to JSON
+	//	halfs := strings.Split(commandExecutionTshark.Args[2], " > ")
+	//	ioutil.WriteFile(halfs[1], bytes, 0)
+	//} else { //An error ocurred
+	//	checkError(e)
+	//}
+	fmt.Println("Tshark executed!")
 }
 
-func stopTshark(commandExecutionTshark *exec.Cmd, executionTimeLimit float64, writer *io.WriteCloser) {
+/*
+func stopTshark(commandExecutionTshark *exec.Cmd, executionTimeLimit float64, config *map[string]string) {
 	now := time.Now()
 	for time.Now().Sub(now).Seconds() < executionTimeLimit { //Loop for execution time control
 	}
-	checkError(commandExecutionTshark.Process.Kill())
-}
+	commandOutputPipe, errorOutputPipe := commandExecutionTshark.StdoutPipe()
+	if _, errorCreate := os.Create("/home/anthony/TFG/archivos/ls.txt"); errorCreate == nil && errorOutputPipe == nil {
+		checkError(commandExecutionTshark.Wait())
+		//_, errorCopy := io.Copy(filePointer, commandOutputPipe)
+		//io.Copy(os.Stdin, commandOutputPipe)
+		//checkError(errorCopy)
+		_ = bufio.NewReader(commandOutputPipe)
+		//		reader.WriteTo()
 
-func startTshark(tsharkCommand string, config *map[string]string) (*exec.Cmd, float64, *io.WriteCloser) {
+	}
+	//checkError(commandExecutionTshark.Process.Kill())
+}
+*/
+func startTshark(tsharkCommand string, config *map[string]string) {
 	/*
 		Input: The command string and the map of configurations.
 		Output:	The reference to the Cmd that started the tshark command and the duration of the execution.
 		Execution: Using a Reader for read the password in the std input of the process, that is who sudo can continue. It starts the process and returns it with the measure of time
 	*/
-	//buffer := strings.NewReader((*config)["PASSWORD"])
-	tsharkCommand = "sudo ls -l > /home/anthony/TFG/archivos/ls.txt"
-	commandExecutionTshark := exec.Command("bash", "-c", tsharkCommand)
-	//commandExecutionTshark.Stdin = buffer //With this the process can obtain the value of the key "PASSWORD"
-	writerPipe, e := commandExecutionTshark.StdinPipe()
-	checkError(e)
-	executionTimeLimit := getDuration(config)
-	executionTimeLimit = 2.0
-	writerPipe.Write([]byte((*config)["PASSWORD"]))
-	//commandExecutionTshark.Start()
-	writerPipe.Close()
-	return commandExecutionTshark, executionTimeLimit, &writerPipe
+	//buffer := strings.NewReader((*config)["PASSWORD"] + "\n")
+	//	tsharkCommand = "sudo ls -l > /home/anthony/TFG/archivos/ls.txt"
+	//tsharkCommand = "sudo ls -l > /home/anthony/TFG/archivos/ls.txt"
+	//tsharkCommand = "sudo ls -l"
+	sudoCommandExecution := exec.Command("bash", "-c", "sudo echo Capture of packets")
+	sudoCommandExecution.Run()
+	tsharkExecution := exec.Command("bash", "-c", tsharkCommand)
+	fmt.Println(tsharkCommand)
+	tsharkExecution.Output()
+	//executionTimeLimit := getDuration(config)
+	/*	executionTimeLimit := 7.0
+		output, err := tsharkExecution.CombinedOutput()
+		checkError(err)
+		fmt.Printf("%s\n", output)*/
+	//	_, errorCopy := io.Copy(commandInputPipe, buffer)
+	//checkError(errorCopy)
+	//tsharkExecution.Stdin = buffer //With this the process can obtain the value of the key "PASSWORD"
 }
 
-func getDuration(config *map[string]string) float64 {
+func getDuration(config *map[string]string) int {
 	/*
 		Input: The configuration map
 		Output:	The amount of seconds defined in config.yml, if it is not defined => we use the default duration(5 seconds)
 		Execution: We parse the keys "TIME_SECONDS" and "TIME_MINUTES", if these are defined => then it stores the add in seconds of both in the variable duration
 	*/
-	duration := 5.0
-	if seconds, error := strconv.ParseFloat((*config)["TIME_SECONDS"], 64); error == nil && seconds > 0.0 {
+	duration := 10
+	if seconds, error := strconv.ParseInt((*config)["TIME_SECONDS"], 10, 0); error == nil && seconds >= 0 {
 		//The error is nil => There is a amount of seconds defined, we have to check if it's negative
-		duration = seconds //Modify the duration
+		secs := int(seconds)
+		duration = secs //Modify the duration
 	} else {
 		checkError(errors.New("Error in the parsing of TIME_SECONDS"))
 	}
-	if minutes, error := strconv.ParseFloat((*config)["TIME_MINUTES"], 64); error == nil && minutes > 0.0 {
+	if minutes, error := strconv.ParseFloat((*config)["TIME_MINUTES"], 64); error == nil && minutes >= 0.0 {
 		//The error is nil => There is a amount of minutes defined, we have to check if it's negative
-		duration += minutes * 60 //Modify the duration
+		duration += int(minutes * 60) //Modify the duration
 	} else {
 		checkError(errors.New("Error in the parsing of TIME_MINUTES"))
 	}
+	if duration <= 0 {
+		duration = 10
+	}
+	duration = 10
 	return duration
 }
 
@@ -146,7 +166,7 @@ func makeCommandTshark(config *map[string]string) string {
 		Output:	The string of the command for the execution of tshark with the args defined in config.yml
 		Execution:	It checks the map and concats the  begin of command with the output_dirname/filename
 	*/
-	command := "sudo -S tshark -i " + (*config)["NETWORK_INTERFACE"] + " -T ek > " + obtainDirectory((*config)["PACKETS_OUTPUT_DIRNAME"])
+	command := "sudo tshark -a duration:" + strconv.Itoa(getDuration(config)) + " -i " + (*config)["NETWORK_INTERFACE"] + " -T ek > " + obtainDirectory((*config)["PACKETS_OUTPUT_DIRNAME"])
 	if strings.Compare((*config)["PACKETS_OUTPUT_FILENAME"], "") == 0 {
 		//This attribute is not defined, then we use the predefined name
 		command += "packets.json"
