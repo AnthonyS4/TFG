@@ -9,33 +9,14 @@ import (
 	"sync"
 	"time"
 
+	"./filebeat"
 	"./others"
-	"./wireshark"
 )
 
 /*
 	Input:
 	Output:
 	Execution:
-*/
-
-/*
-func stopTshark(commandExecutionTshark *exec.Cmd, executionTimeLimit float64, config *map[string]string) {
-	now := time.Now()
-	for time.Now().Sub(now).Seconds() < executionTimeLimit { //Loop for execution time control
-	}
-	commandOutputPipe, errorOutputPipe := commandExecutionTshark.StdoutPipe()
-	if _, errorCreate := os.Create("/home/anthony/TFG/archivos/ls.txt"); errorCreate == nil && errorOutputPipe == nil {
-		others.CheckError(commandExecutionTshark.Wait())
-		//_, errorCopy := io.Copy(filePointer, commandOutputPipe)
-		//io.Copy(os.Stdin, commandOutputPipe)
-		//others.CheckError(errorCopy)
-		_ = bufio.NewReader(commandOutputPipe)
-		//		reader.WriteTo()
-
-	}
-	//others.CheckError(commandExecutionTshark.Process.Kill())
-}
 */
 
 func desployElasticSearchNetwork(config *map[string]string) {
@@ -128,24 +109,11 @@ func makeCommandES(config *map[string]string) string {
 	return command
 }
 
-func filebeatExecution(config *map[string]string) {
-	//commandExecutionFilebeat := exec.Command("bash", "-c", makeCommandFilebeat(config))
-	fmt.Println(makeCommandFilebeat(config))
-}
-
-func makeCommandFilebeat(config *map[string]string) string {
-	if strings.Compare((*config)["FILEBEAT_PATH"], "") == 0 {
-		others.CheckError(errors.New("The FILEBEAT_PATH is not defined"))
-	}
-	command := others.ObtainDirectory((*config)["FILEBEAT_PATH"]) + "filebeat -e"
-	return command
-}
-
 //
 func main() {
 	configuration := others.ObtainConfiguration() //Obtains a reference of a map with the configurations
-	wireshark.ExecuteTshark(configuration)        //Executes tshark
-	//filebeatExecution(configuration)
+	//wireshark.ExecuteTshark(configuration)        //Executes tshark
+	filebeat.FilebeatExecution(configuration)
 	//desployElasticSearchNetwork(configuration) //Start the nodes execution
 
 	//executeKibana(args)
