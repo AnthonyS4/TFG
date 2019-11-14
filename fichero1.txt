@@ -1,1 +1,0 @@
-/home/anthony/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/local/go/bin:/bin:/usr/local/jre1.8.0_231/bin
