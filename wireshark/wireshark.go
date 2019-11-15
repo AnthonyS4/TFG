@@ -11,12 +11,13 @@ import (
 )
 
 // ExecuteTshark :This function executes the tshark command for an measure of time given in the config.yml
-func ExecuteTshark(config *map[string]string) {
+func ExecuteTshark(config *map[string]string) string {
 	/*
 		Input: The configuration map
 		Output: ~
 	*/
-	startTshark(makeCommandTshark(config), config) //startTshark will begin the process
+	tsharkCommand := makeCommandTshark(config)
+	startTshark(tsharkCommand, config) //startTshark will begin the process
 	//stopTshark(commandExecutionTshark, executionTimeLimit, config)
 	//if bytes, e := commandExecutionTshark.Output(); e == nil {
 	//Convert the []bytes to JSON
@@ -26,6 +27,7 @@ func ExecuteTshark(config *map[string]string) {
 	//	others.CheckError(e)
 	//}
 	fmt.Println("Tshark executed!")
+	return tsharkCommand
 }
 
 func startTshark(tsharkCommand string, config *map[string]string) {

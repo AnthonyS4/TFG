@@ -14,8 +14,8 @@ func ObtainConfiguration() *map[string]string {
 		Output: The reference of the map that will contains the configurations of the program
 	*/
 	configuration := make(map[string]string)
-	data, error := ioutil.ReadFile("config.yml")
-	CheckError(error) //Checking if the file exists
+	data, errorRead := ioutil.ReadFile("config.yml")
+	CheckError(errorRead) //Checking if the file exists
 	lines := checkAttributes(data)
 	for i := 0; i < len(lines); i++ { //This loop will read and store the keys and values defined in the config.yml
 		keyAndValue := strings.Split(lines[i], ":")

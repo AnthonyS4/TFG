@@ -1,7 +1,7 @@
 package main
 
 import (
-	"./elasticsearch"
+	"./filebeat"
 	"./others"
 )
 
@@ -15,8 +15,9 @@ import (
 func main() {
 	configuration := others.ObtainConfiguration() //Obtains a reference of a map with the configurations
 	//wireshark.ExecuteTshark(configuration)        //Executes tshark
-	//filebeatExecution(configuration)
-	elasticsearch.DeployElasticSearchNetwork(configuration) //Start the nodes execution
+	tsharkCommand := "blabal/ablaa7asdb/ > /home/anthony/TFG/archivos/paquetes.json"
+	filebeat.FilebeatExecution(configuration, tsharkCommand)
+	//elasticsearch.DeployElasticSearchNetwork(configuration) //Start the nodes execution
 
 	//executeKibana(args)
 }
