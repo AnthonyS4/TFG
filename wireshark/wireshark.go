@@ -11,23 +11,14 @@ import (
 )
 
 // ExecuteTshark :This function executes the tshark command for an measure of time given in the config.yml
-func ExecuteTshark(config *map[string]string) string {
+func Execute(config *map[string]string, *reference string) {
 	/*
 		Input: The configuration map
 		Output: ~
 	*/
-	tsharkCommand := makeCommandTshark(config)
-	startTshark(tsharkCommand, config) //startTshark will begin the process
-	//stopTshark(commandExecutionTshark, executionTimeLimit, config)
-	//if bytes, e := commandExecutionTshark.Output(); e == nil {
-	//Convert the []bytes to JSON
-	//	halfs := strings.Split(commandExecutionTshark.Args[2], " > ")
-	//	ioutil.WriteFile(halfs[1], bytes, 0)
-	//} else { //An error ocurred
-	//	others.CheckError(e)
-	//}
+	(*reference) = makeCommandTshark(config)
+	startTshark((*reference), config) //startTshark will begin the process
 	fmt.Println("Tshark executed!")
-	return tsharkCommand
 }
 
 func startTshark(tsharkCommand string, config *map[string]string) {
@@ -36,23 +27,11 @@ func startTshark(tsharkCommand string, config *map[string]string) {
 		Output:	The reference to the Cmd that started the tshark command and the duration of the execution.
 		Execution: Using a Reader for read the password in the std input of the process, that is who sudo can continue. It starts the process and returns it with the measure of time
 	*/
-	//buffer := strings.NewReader((*config)["PASSWORD"] + "\n")
-	//	tsharkCommand = "sudo ls -l > /home/anthony/TFG/archivos/ls.txt"
-	//tsharkCommand = "sudo ls -l > /home/anthony/TFG/archivos/ls.txt"
-	//tsharkCommand = "sudo ls -l"
 	sudoCommandExecution := exec.Command("bash", "-c", "sudo echo Capture of packets")
 	sudoCommandExecution.Run()
 	tsharkExecution := exec.Command("bash", "-c", tsharkCommand)
 	fmt.Println(tsharkCommand)
 	tsharkExecution.Output()
-	//executionTimeLimit := getDuration(config)
-	/*	executionTimeLimit := 7.0
-		output, err := tsharkExecution.CombinedOutput()
-		others.CheckError(err)
-		fmt.Printf("%s\n", output)*/
-	//	_, errorCopy := io.Copy(commandInputPipe, buffer)
-	//others.CheckError(errorCopy)
-	//tsharkExecution.Stdin = buffer //With this the process can obtain the value of the key "PASSWORD"
 }
 
 func makeCommandTshark(config *map[string]string) string {
