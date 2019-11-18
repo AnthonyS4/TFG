@@ -2,6 +2,7 @@ package filebeat
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os/exec"
 	"strings"
@@ -9,13 +10,13 @@ import (
 	"../others"
 )
 
-// FilebeatExecution :Function that executes filebeat
-func FilebeatExecution(config *map[string]string, tsharkCommand string) {
+// FilebeatExecution :Function that executes filebeat using filebeat.yml
+func Execution(config *map[string]string, tsharkCommand string) {
 	packetsDest := strings.Split(tsharkCommand, " > ")[1]
+	changeConfigPermissions(config)
 	changeYML(config, packetsDest)
-	//fmt.Println(changeConfigPermissions(config))
 	//commandExecutionFilebeat := exec.Command("bash", "-c", makeCommandFilebeat(config))
-	//fmt.Println(makeCommandFilebeat(config))
+	fmt.Println(makeCommandFilebeat(config))
 }
 
 func changeYML(config *map[string]string, packetsDest string) {
