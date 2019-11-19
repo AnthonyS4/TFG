@@ -2,6 +2,9 @@ package flags
 
 import (
 	"errors"
+	"fmt"
+	"os"
+	"os/exec"
 	"strings"
 
 	"../others"
@@ -30,7 +33,7 @@ func checkArgs(args []string) {
 }
 
 func getAllowedFlags() ([]string, []string) {
-	first := [...]string{"-n", "-t", "-h"}
+	first := [...]string{"-h", "-n", "-t"}
 	second := [...]string{"--help", "--now", "--timelimit"}
 	return first[:], second[:]
 }
@@ -38,13 +41,28 @@ func getAllowedFlags() ([]string, []string) {
 func check2(allowed []string, arg string) {
 	if !contains(allowed[:], arg) {
 		others.CheckError(errors.New("The flag" + arg + " is not allowed"))
+	} else {
+		if arg == "--help" {
+			printHelp()
+			os.Exit(0)
+		}
 	}
 }
 
 func check1(allowed []string, arg string) {
 	if !contains(allowed[:], arg) {
 		others.CheckError(errors.New("The flag" + arg + " is not allowed"))
+	} else {
+		if arg == "-h" {
+			printHelp()
+			os.Exit(0)
+		}
 	}
+}
+
+func printHelp() {
+	data, _ := exec.Command("bash", "-c", "cat help.txt").Output()
+	fmt.Println(string(data))
 }
 
 func contains(vector []string, element string) bool {

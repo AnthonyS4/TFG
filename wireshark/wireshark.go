@@ -10,8 +10,8 @@ import (
 	"../others"
 )
 
-// ExecuteTshark :This function executes the tshark command for an measure of time given in the config.yml
-func Execute(config *map[string]string, *reference string) {
+// Execute :This function executes the tshark command for an measure of time given in the config.yml
+func Execute(config *map[string]string, reference *string) {
 	/*
 		Input: The configuration map
 		Output: ~
@@ -31,7 +31,7 @@ func startTshark(tsharkCommand string, config *map[string]string) {
 	sudoCommandExecution.Run()
 	tsharkExecution := exec.Command("bash", "-c", tsharkCommand)
 	fmt.Println(tsharkCommand)
-	tsharkExecution.Output()
+	tsharkExecution.Run()
 }
 
 func makeCommandTshark(config *map[string]string) string {
