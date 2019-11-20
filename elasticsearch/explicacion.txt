@@ -1,0 +1,78 @@
+Para comunicarnos con el servidor de elasticsearch:
+-Se lanza la ejecuccion de un nodo de ES.
+-Se utilizan las operaciones de comunicacion usando el comando curl.
+
+Las operaciones principales son:
+
+-GET : Para pedir inforacion de un documento(en el ejemplo con su ID)
++ curl -X GET "localhost:9200/customer/_doc/1?pretty"
+
+-PUT : Con Put podemos agregar el documento con un ID unico, y claves/valor. En el ejemplo crearemos un documento(por que no existe previamente)
+	llamado customer, ademas de asignarle el ID = 1, y que ese ID tenga una campo 'name' con valor 'John'
++ curl -X PUT "localhost:9200/customer/_doc/1?pretty" -H 'Content-Type: application/json' -d'
+{
+  "name": "John Doe"
+}
+'
+
+-Tras descargar el archivo accounts.json, se puede registrar como documento en ES, con el campo index es capaz de crear
+	las claves primarias y acosiarlas al resto de datos. Con el siguiente curl le pedimos el numero de indices usando el API de cat.
+	
++curl -H "Content-Type: application/json" -XPOST "localhost:9200/bank/_bulk?pretty&refresh" --data-binary "@accounts.json"
++curl "localhost:9200/_cat/indices?v"
+
+Vamos a probar a meter el salidaFilebeat.json como un documento, para ello probamos el comando:
+curl -H "Content-Type: application/json" -XPOST "localhost:9200/bank/_bulk?pretty&refresh" --data-binary "@/home/anthony/TFG/archivos/salidaFilebeat.json"
+
+Y no funciona por supuesto, el error indica que no puede leer los datos de salidaFilebeat.json por falta de permisos, pues habra q recurrir al sudo.
+Tras usar sudo vuelve a dar error, q sorpresa, en este caso indica que en un ileagal_argument_exception y problemas con lo metadatos.
+ 
+	
+PUT _template/packets
+{
+  "template": "packets-*",
+  "mappings": {
+    "pcap_file": {
+      "dynamic": "false",
+      "properties": {
+        "timestamp": {
+          "type": "date"
+        },
+        "layers": {
+          "properties": {
+            "frame": {
+              "properties": {
+                "frame_frame_len": {
+                  "type": "long"
+                },
+                "frame_frame_protocols": {
+                  "type": "keyword"
+                }
+              }
+            },
+            "ip": {
+              "properties": {
+                "ip_ip_src": {
+                  "type": "ip"
+                },
+                "ip_ip_dst": {
+                  "type": "ip"
+                }
+              }
+            },
+            "udp": {
+              "properties": {
+                "udp_udp_srcport": {
+                  "type": "integer"
+                },
+                "udp_udp_dstport": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
