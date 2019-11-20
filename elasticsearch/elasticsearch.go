@@ -12,7 +12,7 @@ import (
 	"../others"
 )
 
-// DesployElasticSearchNetwork : Function..
+// DeployElasticSearchNetwork : Function..
 func DeployElasticSearchNetwork(config *map[string]string) {
 	/*
 		Input: The configuration map.
@@ -76,13 +76,12 @@ func getNodeTimeOut(config *map[string]string) float64 {
 
 	if strings.Compare((*config)["NODE_TIMEOUT"], "") == 0 {
 		return 1.0
-	} else {
-		exeTime, e := strconv.ParseFloat((*config)["NODE_TIMEOUT"], 64)
-		if exeTime < 0.0 || e != nil {
-			others.CheckError(errors.New("	Error in the parsing of NODE_TIMEOUT"))
-		}
-		return exeTime
 	}
+	exeTime, e := strconv.ParseFloat((*config)["NODE_TIMEOUT"], 64)
+	if exeTime < 0.0 || e != nil {
+		others.CheckError(errors.New("	Error in the parsing of NODE_TIMEOUT"))
+	}
+	return exeTime
 }
 
 func obtainNodesNumber(config *map[string]string) int {
@@ -94,11 +93,10 @@ func obtainNodesNumber(config *map[string]string) int {
 
 	if strings.Compare((*config)["NODES_NUMBER"], "") == 0 {
 		return 1
-	} else {
-		nodesNumber, e := strconv.ParseInt((*config)["NODES_NUMBER"], 10, 32)
-		if nodesNumber < 1 || e != nil {
-			others.CheckError(errors.New("	Error in the parsing of NODES_NUMBER"))
-		}
-		return int(nodesNumber)
 	}
+	nodesNumber, e := strconv.ParseInt((*config)["NODES_NUMBER"], 10, 32)
+	if nodesNumber < 1 || e != nil {
+		others.CheckError(errors.New("	Error in the parsing of NODES_NUMBER"))
+	}
+	return int(nodesNumber)
 }
