@@ -1,75 +1,67 @@
 package flags
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 
-	"../others"
+	"github.com/spf13/cobra"
 )
 
-//Read :This function read the flags and values inserted for the program execution
-func Read(args []string) *map[string]string {
-	flags := make(map[string]string)
-	checkArgs(args)
-	return &flags
+//Execute :This function read the flags and values inserted for the program execution
+func Execute() *map[string]string {
+	configuration := make(map[string]string)
+	command := getCobraCommand(&configuration)
+	if command.Execute() != nil {
+		fmt.Println("Vaya bug")
+		os.Exit(1)
+	}
+	return &configuration
 }
 
-func checkArgs(args []string) {
-	allowed1, allowed2 := getAllowedFlags()
-	for i := 0; i < len(args); i++ {
-		if strings.Contains(args[i], "--") {
-			check2(allowed2[:], args[i])
-		} else {
-			if strings.Contains(args[i], "-") {
-				check1(allowed1[:], args[i])
+func getCobraCommand(config *map[string]string) *cobra.Command {
+	var rootCmd = &cobra.Command{}
+	var auxCmd = &cobra.Command{
+		Use:   "Use",
+		Short: "Analyse network data",
+		Long:  "Analyse is for capture",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			exec.Command("bash", "-c", "sudo pwd").Run()
+		},
+		Run: func(cmd *cobra.Command, args []string) {
+			if timelimit, errorTimeL := rootCmd.Flags().GetString("timelimit"); errorTimeL != nil {
+				(*config)["TIMELIMIT"] = ""
 			} else {
-				others.CheckError(errors.New("The " + args[i] + " is not allowed as input"))
+				(*config)["TIMELIMIT"] = timelimit
 			}
-		}
+			if begin, errorBegin := rootCmd.Flags().GetString("begin"); errorBegin != nil {
+				(*config)["BEGIN"] = ""
+			} else {
+				(*config)["NOW"] = ""
+				(*config)["BEGIN"] = begin
+			}
+			if end, errorEnd := rootCmd.Flags().GetString("end"); errorEnd != nil {
+				(*config)["END"] = ""
+			} else {
+				(*config)["END"] = end
+			}
+		},
 	}
+	rootCmd = auxCmd
+	setTemplates(rootCmd)
+	putFlags(config, rootCmd)
+	return rootCmd
 }
 
-func getAllowedFlags() ([]string, []string) {
-	first := [...]string{"-h", "-n", "-t"}
-	second := [...]string{"--help", "--now", "--timelimit"}
-	return first[:], second[:]
+func putFlags(config *map[string]string, rootCmd *cobra.Command) {
+	var timeLimit, begin, end string
+	rootCmd.Flags().StringVarP(&timeLimit, "timelimit", "t", "", "Limite de tiempo de captura en segundos")
+	rootCmd.Flags().StringVarP(&begin, "begin", "b", "", "Fijar la hora de comienzo de la captura")
+	rootCmd.Flags().StringVarP(&end, "end", "e", "", "Fijar la hora de comienzo de la captura")
 }
 
-func check2(allowed []string, arg string) {
-	if !contains(allowed[:], arg) {
-		others.CheckError(errors.New("The flag" + arg + " is not allowed"))
-	} else {
-		if arg == "--help" {
-			printHelp()
-			os.Exit(0)
-		}
-	}
-}
-
-func check1(allowed []string, arg string) {
-	if !contains(allowed[:], arg) {
-		others.CheckError(errors.New("The flag" + arg + " is not allowed"))
-	} else {
-		if arg == "-h" {
-			printHelp()
-			os.Exit(0)
-		}
-	}
-}
-
-func printHelp() {
-	data, _ := exec.Command("bash", "-c", "cat help.txt").Output()
-	fmt.Println(string(data))
-}
-
-func contains(vector []string, element string) bool {
-	for i := 0; i < len(vector); i++ {
-		if strings.Compare(vector[i], element) == 0 {
-			return true
-		}
-	}
-	return false
+func setTemplates(rootCmd *cobra.Command) {
+	rootCmd.SetHelpTemplate("OUTPUT FOR HELP FLAG")
+	rootCmd.SetUsageTemplate("./rc analyse [-n now] ")
+	rootCmd.SetVersionTemplate("Version 1.0.0")
 }
